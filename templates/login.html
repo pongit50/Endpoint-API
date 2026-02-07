@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>WatchGuard - Login</title>
+    <script src="https://cdn.tailwindcss.com">
+
+document.querySelector('form').onsubmit = function() {
+    const btn = this.querySelector('button');
+    btn.innerHTML = "⏳ Authenticating...";
+    btn.disabled = true;
+};
+</script>
+</head>
+<body class="bg-slate-900 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md">
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-black text-slate-800">🛡️ API AUTHENTICATION</h1>
+            <p class="text-slate-400 text-xs mt-2">กรอก Credentials เพื่อเข้าใช้งาน Dashboard</p>
+        </div>
+
+        {% if error %}
+        <div class="bg-red-50 text-red-500 p-3 rounded-lg text-xs font-bold mb-4 border border-red-100 uppercase text-center">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/login" method="POST" class="space-y-4">
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase">Access ID</label>
+                <input type="text" name="access_id" required class="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-blue-500 transition">
+            </div>
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase">API Key</label>
+                <input type="password" name="api_key" required class="w-full p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-blue-500 transition">
+            </div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-lg active:scale-95 uppercase text-xs tracking-widest">
+                Login to Dashboard
+            </button>
+        </form>
+    </div>
+</body>
+</html>

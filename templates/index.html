@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WatchGuard Control Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', sans-serif; }</style>
+    
+</head>
+<body class="bg-[#f8fafc] p-4 md:p-8">
+    
+    <div class="max-w-6xl mx-auto">
+        
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+            <div>
+                <h1 class="text-2xl font-800 text-slate-900 flex items-center gap-2">
+                    <span class="bg-blue-600 text-white p-1.5 rounded-lg text-lg">🛡️</span>
+                    WatchGuard API Dashboard
+                </h1>
+                <p class="text-slate-500 text-xs mt-1">Real-time WatchGuard Isolation Control</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex items-center gap-1 px-2 border-r border-slate-100">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Alerts:</span>
+                        <select onchange="changeTimeframe(this.value)" class="text-xs font-bold text-blue-600 outline-none bg-transparent">
+                            <option value="7" {% if current_days == 7 %}selected{% endif %}>Last 7D</option>
+                            <option value="30" {% if current_days == 30 %}selected{% endif %}>Last 30D</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-1 px-2">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Show:</span>
+                        <select id="pageSize" onchange="onPageSizeChange()" class="text-xs font-bold text-slate-600 outline-none bg-transparent">
+                            <option value="10">10</option>
+                            <option value="50">50</option>
+                            <option value="1000">All</option>
+                        </select>
+                    </div>
+                    <select id="refreshRate" onchange="updateRefreshInterval(this.value)" class="text-[10px] font-black bg-slate-100 px-2 py-1 rounded-md text-slate-500 uppercase">
+                        <option value="0">Refresh: OFF</option>
+                        <option value="15000">15s</option>
+                        <option value="60000">1m</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <a href="/export" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-2 transition shadow-sm">
+                        📊 EXPORT
+                    </a>
+                    <a href="/logout" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl border border-rose-100 text-[10px] font-bold transition">
+                        LOGOUT
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div class="bg-blue-50 text-blue-600 p-3 rounded-xl text-xl">💻</div>
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Assets</p>
+                    <p class="text-xl font-800 text-slate-800">{{ stats.total }}</p>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 border-l-4 border-l-orange-500">
+                <div class="bg-orange-50 text-orange-600 p-3 rounded-xl text-xl">⚠️</div>
+                <div>
+                    <p class="text-[10px] font-bold text-orange-400 uppercase tracking-wider">Active Threats</p>
+                    <p class="text-xl font-800 text-orange-600">{{ stats.threats }}</p>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 border-l-4 border-l-rose-500">
+                <div class="bg-rose-50 text-rose-600 p-3 rounded-xl text-xl">🚫</div>
+                <div>
+                    <p class="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Isolated</p>
+                    <p class="text-xl font-800 text-rose-600">{{ stats.isolated }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 col-span-1 md:col-span-4">
+        <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="text-blue-600 text-lg">📊</span> Security Event Counts (Last 3 Months)
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div class="text-center">
+                <p class="text-2xl font-800 text-slate-800">{{ security_events.malware }}</p>
+                <p class="text-[10px] font-bold text-slate-400 uppercase">Malware</p>
+            </div>
+            <div class="text-center border-l border-slate-50">
+                <p class="text-2xl font-800 text-slate-800">{{ security_events.pup }}</p>
+                <p class="text-[10px] font-bold text-slate-400 uppercase">PUPs</p>
+            </div>
+            <div class="text-center border-l border-slate-50">
+                <p class="text-2xl font-800 text-slate-800">{{ security_events.exploit }}</p>
+                <p class="text-[10px] font-bold text-slate-400 uppercase">Exploits</p>
+            </div>
+            <div class="text-center border-l border-slate-50">
+                <p class="text-2xl font-800 text-blue-600">{{ security_events.total }}</p>
+                <p class="text-[10px] font-bold text-blue-400 uppercase">Total Events</p>
+            </div>
+        </div>
+    </div>
+</div>
+       
+
+    
+</div>
+
+
+
+        <div class="flex flex-col md:flex-row gap-4 mb-6 items-center">
+            <div class="relative w-full">
+                <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search hostname or IP address..." 
+                       class="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-blue-500/10 outline-none transition shadow-sm">
+                <span class="absolute left-4 top-3.5 opacity-30">🔍</span>
+            </div>
+            
+            <div class="flex gap-1 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm shrink-0">
+                <button onclick="filterByQuickStatus('all')" class="quick-filter-btn active-filter px-3 py-1.5 rounded-lg text-[10px] font-bold bg-slate-100">ALL</button>
+                <button onclick="filterByQuickStatus('SECURE')" class="quick-filter-btn px-3 py-1.5 rounded-lg text-[10px] font-bold text-emerald-600 hover:bg-emerald-50">SECURE</button>
+                <button onclick="filterByQuickStatus('ISOLATED')" class="quick-filter-btn px-3 py-1.5 rounded-lg text-[10px] font-bold text-rose-600 hover:bg-rose-50">ISOLATED</button>
+                <button onclick="filterByQuickStatus('Alerts')" class="quick-filter-btn px-3 py-1.5 rounded-lg text-[10px] font-bold text-orange-600 hover:bg-orange-50">THREATS</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden">
+            <div class="p-3 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center px-6">
+                <span class="text-[10px] font-bold text-slate-400 uppercase">Device List</span>
+                <span class="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">MATCHED: <span id="totalMatched">0</span></span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left" id="deviceTable">
+                    <thead class="bg-slate-50/80">
+                        <tr class="text-[10px] font-800 text-slate-400 uppercase tracking-widest">
+                            <th class="px-6 py-4">Device Info</th>
+                            <th class="px-6 py-4 text-center">Threats</th>
+                            <th class="px-6 py-4 text-center">Security Status</th>
+                            <th class="px-6 py-4 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for d in devices %}
+                        <tr class="device-row hover:bg-slate-50/80 transition group">
+                            <td class="px-6 py-4">
+                                <button onclick="showDetails('{{ d.name }}', '{{ d.ip }}', '{{ d.status }}', '{{ d.malware_count }}', '{{ d.last_conn }}', '{{ d.os }}', '{{ d.agent_version }}', '{{ d.domain }}', '{{ d.group }}', '{{ d.id }}')" 
+                                        class="text-left group/item focus:outline-none">
+                                    <p class="text-sm font-bold text-slate-800 group-hover/item:text-blue-600 transition-colors">{{ d.name }}</p>
+                                    <p class="text-[10px] font-mono text-slate-400">{{ d.ip }}</p>
+                                </button>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                {% if d.malware_count > 0 %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-600">
+                                        {{ d.malware_count }} Alerts
+                                    </span>
+                                {% else %}
+                                    <span class="text-[10px] text-slate-300 italic">No threats</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                {% if d.status == "1" %}
+                                    <span class="px-3 py-1 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold border border-red-100 animate-pulse">● ISOLATED</span>
+                                {% elif d.status == "2" or d.status == "3" %}
+                                    <span class="px-3 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-bold border border-amber-100">● PENDING</span>
+                                {% else %}
+                                    <span class="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">● SECURE</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                {% if d.status == "1" %}
+                                    <button onclick="performAction(this, '{{ d.id }}', 'noisolation')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-[10px] font-bold transition shadow-md active:scale-95">RESTORE</button>
+                                {% elif d.status == "2" or d.status == "3" %}
+                                    <button disabled class="bg-slate-100 text-slate-400 px-4 py-1.5 rounded-lg text-[10px] font-bold cursor-not-allowed">WAITING</button>
+                                {% else %}
+                                    <button onclick="performAction(this, '{{ d.id }}', 'isolation')" class="bg-slate-900 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg text-[10px] font-bold transition shadow-md active:scale-95">ISOLATE</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="emptyState" class="hidden p-20 text-center">
+                <p class="text-slate-300 text-4xl mb-2">🔭</p>
+                <p class="text-slate-400 text-sm font-medium">No devices matching your search</p>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center font-bold">
+                <p class="text-[10px] text-slate-400">
+                    PAGE <span id="currentPage" class="text-slate-900 underline underline-offset-4">1</span>
+                </p>
+                <div class="flex gap-2">
+                    <button onclick="changePage(-1)" id="btnPrev" class="px-4 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] text-slate-600 hover:bg-slate-100 disabled:opacity-30 transition shadow-sm">PREV</button>
+                    <button onclick="changePage(1)" id="btnNext" class="px-4 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] text-slate-600 hover:bg-slate-100 disabled:opacity-30 transition shadow-sm">NEXT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    let refreshTimer;
+    let currentPage = 1;
+    let currentQuickFilter = 'all'; // ค่าเริ่มต้นคือแสดงทั้งหมด
+
+    // ฟังก์ชันกรองข้อมูลจากปุ่มลัด (SECURE, ISOLATED, THREATS)
+    function filterByQuickStatus(status) {
+        currentQuickFilter = status;
+        currentPage = 1;
+        
+        // จัดการ UI ของปุ่ม (Highlight ปุ่มที่เลือก)
+        const btns = document.querySelectorAll('.quick-filter-btn');
+        btns.forEach(btn => {
+            btn.classList.remove('bg-slate-900', 'text-white');
+            // เช็คว่าข้อความบนปุ่มตรงกับสถานะที่เลือกหรือไม่
+            if(btn.innerText.includes(status.toUpperCase())) {
+               btn.classList.add('bg-slate-900', 'text-white');
+            }
+        });
+        
+        updatePagination();
+    }
+
+    function updatePagination() {
+        const pageSize = parseInt(document.getElementById("pageSize").value);
+        const searchFilter = document.getElementById("searchInput").value.toUpperCase();
+        const rows = Array.from(document.getElementsByClassName("device-row"));
+        
+        // 1. กรองข้อมูล (Filter)
+        const matchedRows = rows.filter(row => {
+            const text = row.textContent.toUpperCase();
+            const matchesSearch = text.includes(searchFilter);
+            
+            let matchesQuick = false;
+            if (currentQuickFilter === 'all') {
+                matchesQuick = true;
+            } else if (currentQuickFilter === 'Alerts') {
+                matchesQuick = text.includes('ALERTS');
+            } else {
+                // สำหรับ SECURE และ ISOLATED
+                matchesQuick = text.includes(currentQuickFilter.toUpperCase());
+            }
+            
+            return matchesSearch && matchesQuick;
+        });
+
+        // 2. คำนวณหน้า (Pagination Logic)
+        const totalPages = Math.ceil(matchedRows.length / pageSize) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        // 3. แสดงผล (Display)
+        rows.forEach(r => r.style.display = "none"); // ซ่อนทุกแถวก่อน
+        
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        
+        matchedRows.slice(start, end).forEach(r => {
+            r.style.display = ""; // แสดงเฉพาะแถวที่อยู่ในหน้านั้นๆ
+        });
+
+        // 4. อัปเดตตัวเลขบนหน้าจอ
+        document.getElementById("totalMatched").innerText = matchedRows.length;
+        document.getElementById("currentPage").innerText = currentPage;
+        document.getElementById("btnPrev").disabled = (currentPage === 1);
+        document.getElementById("btnNext").disabled = (currentPage === totalPages);
+        
+        // แสดงข้อความเมื่อไม่พบข้อมูล
+        const emptyState = document.getElementById("emptyState");
+        if (emptyState) {
+            emptyState.classList.toggle("hidden", matchedRows.length > 0);
+        }
+    }
+
+    // ฟังก์ชันจัดการ Isolate / Restore
+    async function performAction(btn, id, action) {
+        if (!confirm(`คุณต้องการยืนยันการทำรายการ ${action.toUpperCase()} หรือไม่?`)) return;
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "⏳ ...";
+
+        try {
+            const res = await fetch('/action', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id, action })
+            });
+            const result = await res.json();
+            if (result.status === 'success') {
+                location.reload(); // รีโหลดเพื่ออัปเดตสถานะจาก API จริง
+            } else {
+                alert("เกิดข้อผิดพลาด: " + result.message);
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
+        } catch (e) { 
+            alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้");
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+    }
+
+    // ฟังก์ชันพื้นฐานอื่นๆ
+    function searchTable() { currentPage = 1; updatePagination(); }
+    function onPageSizeChange() { currentPage = 1; updatePagination(); }
+    function changePage(s) { currentPage += s; updatePagination(); }
+    function changeTimeframe(d) { window.location.href = "/?days=" + d; }
+
+    function updateRefreshInterval(ms) {
+        if (refreshTimer) clearInterval(refreshTimer);
+        const msInt = parseInt(ms);
+        if (msInt > 0) {
+            refreshTimer = setInterval(() => {
+                // ถ้ายูสเซอร์ไม่ได้กำลังพิมพ์ค้นหา ให้ทำการรีเฟรชหน้า
+                if (!document.getElementById("searchInput").value) {
+                    location.reload();
+                }
+            }, msInt);
+        }
+    }
+
+    // เรียกทำงานครั้งแรกเมื่อโหลดหน้าเสร็จ
+    window.onload = () => {
+        updatePagination();
+        updateRefreshInterval(document.getElementById("refreshRate").value);
+    };
+
+
+    //////
+   // index.html: ส่วน JavaScript
+function showDetails(name, ip, status, threats, lastConn, os, agent, mac, group, id) {
+    const modal = document.getElementById('detailsModal');
+    const content = document.getElementById('modalContent');
+    const actionBtn = document.getElementById('modalActionBtn');
+    
+
+    // อัปเดตข้อมูล Text
+    document.getElementById('m_name').innerText = name;
+    document.getElementById('m_ip').innerText = ip;
+    document.getElementById('m_threats').innerText = threats + ' Alerts';
+    document.getElementById('m_last').innerText = lastConn;
+    document.getElementById('m_os').innerText = os;
+    document.getElementById('m_agent').innerText = agent;
+    document.getElementById('m_mac').innerText = mac;
+    document.getElementById('m_group').innerText = group;
+
+    // จัดการสถานะและปุ่ม Action
+    if (status === '1') {
+        document.getElementById('m_status').innerText = '🚫 ISOLATED';
+        document.getElementById('m_status').className = 'text-xs font-bold text-rose-600';
+        actionBtn.innerText = '🔓 RESTORE DEVICE';
+        actionBtn.className = 'flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase transition shadow-md active:scale-95';
+        actionBtn.onclick = () => performAction(actionBtn, id, 'noisolation');
+    } else {
+        document.getElementById('m_status').innerText = '🛡️ SECURE';
+        document.getElementById('m_status').className = 'text-xs font-bold text-emerald-600';
+        actionBtn.innerText = '🚫 ISOLATE DEVICE';
+        actionBtn.className = 'flex-1 py-3 bg-slate-900 hover:bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase transition shadow-md active:scale-95';
+        actionBtn.onclick = () => performAction(actionBtn, id, 'isolation');
+    }
+
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+    }, 10);
+}
+
+// ตรวจสอบว่ามีฟังก์ชัน closeModal() นิยามไว้ชัดเจน
+function closeModal() {
+    const modal = document.getElementById('detailsModal');
+    const content = document.getElementById('modalContent');
+    content.classList.remove('scale-100', 'opacity-100');
+    content.classList.add('scale-95', 'opacity-0');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+}
+</script>
+
+<div id="detailsModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div id="modalContent" class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden transform transition-all scale-95 opacity-0 duration-300">
+        <div class="bg-slate-900 p-6 text-white flex justify-between items-center">
+            <h3 class="text-lg font-800">Device Intelligence</h3>
+            <button onclick="closeModal()" class="text-2xl opacity-50 hover:opacity-100">&times;</button>
+        </div>
+        <div class="p-8">
+            <div class="flex flex-col items-center mb-6">
+                <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center text-3xl mb-3 shadow-inner">🖥️</div>
+                <h4 id="m_name" class="text-xl font-800 text-slate-900">-</h4>
+                <p id="m_ip" class="text-xs font-mono text-slate-400">-</p>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-3 mb-6">
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                    <span class="text-[9px] font-black text-slate-400 uppercase">Security State</span>
+                    <span id="m_status" class="text-xs font-bold">-</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                    <span class="text-[9px] font-black text-slate-400 uppercase">Threats</span>
+                    <span id="m_threats" class="text-xs font-bold">-</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                    <span class="text-[9px] font-black text-slate-400 uppercase">Last Conn</span>
+                    <span id="m_last" class="text-[10px] font-bold text-slate-600">-</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="p-3 bg-slate-50 rounded-xl">
+                        <p class="text-[9px] font-black text-slate-400 uppercase">OS</p>
+                        <p id="m_os" class="text-[10px] font-bold">-</p>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl">
+                        <p class="text-[9px] font-black text-slate-400 uppercase">Agent</p>
+                        <p id="m_agent" class="text-[10px] font-bold">-</p>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl">
+                        <p class="text-[9px] font-black text-slate-400 uppercase">Domain</p>
+                        <p id="m_mac" class="text-[10px] font-mono font-bold">-</p>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl">
+                        <p class="text-[9px] font-black text-slate-400 uppercase">Group</p>
+                        <p id="m_group" class="text-[10px] font-bold">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-2">
+                <button id="modalActionBtn" class="flex-1 py-3 text-white rounded-xl text-[10px] font-black uppercase transition shadow-md active:scale-95">-</button>
+                <button onclick="closeModal()" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase hover:bg-slate-200">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
