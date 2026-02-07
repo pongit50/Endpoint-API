@@ -109,17 +109,27 @@ def index():
         det_res = requests.get(f"{BASE_URL}/rest/endpoint-security/management/api/v1/accounts/{ACCOUNT_ID}/detections?date_from={start_date}", headers=headers, timeout=15)
        # 2. เรียก API เพื่อดึง Security Event Counters
         # ใช้หัวข้อ 255 เพื่อดึง Counters ทั้งหมด
-        counter_url = f"{BASE_URL}/rest/endpoint-security/management/api/v1/accounts/{ACCOUNT_ID}/securityeventcounters/255?filter={event_filter}"
+        #counter_url = f"{BASE_URL}/rest/endpoint-security/management/api/v1/accounts/{ACCOUNT_ID}/securityeventcounters/255?filter={event_filter}"
+        counter_url = f"{BASE_URL}/rest/endpoint-security/management/api/v1/accounts/{ACCOUNT_ID}/securityoverview/30"
         counter_res = requests.get(counter_url, headers=headers, timeout=15)
-        event_data = counter_res.json().get('data', {})
-        event_counts = event_data.get('counts', [])
+        print(counter_url)
+        print(counter_res.status_code)
+        print(counter_res.text[:500])
+        data = counter_res.json()
+
         # เตรียมสรุปข้อมูลสำหรับแสดงใน Panel
         # เช่น ดึงค่า Malware (1), PUP (2), Exploit (3) เป็นต้น
         security_events = {
-            "malware": next((item['count'] for item in event_counts if item['type'] == 1), 0),
-            "pup": next((item['count'] for item in event_counts if item['type'] == 2), 0),
-            "exploit": next((item['count'] for item in event_counts if item['type'] == 3), 0),
-            "total": sum(item['count'] for item in event_counts)
+            "malware": data.get("malware", {}).get("total_alerts", 0),
+            "pup": data.get("pups", {}).get("total_alerts", 0),
+            "exploit": data.get("exploits", {}).get("total_alerts", 0),
+            "programs_blocked": data.get("programs_blocked",{}).get("total_programs_blocked", 0),
+            "total": (
+                data.get("malware", {}).get("total_alerts", 0)
+                + data.get("pups", {}).get("total_alerts", 0)
+                + data.get("exploits", {}).get("total_alerts", 0)
+                + data.get("programs_blocked",{}).get("total_programs_blocked",0)
+            ),
         }
 
         raw_devices = dev_res.json().get('data', [])
